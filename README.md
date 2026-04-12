@@ -9,6 +9,7 @@
 
 - [Installation](#installation)
 - [License](#license)
+- [Examples](#examples)
 
 ## Installation
 
@@ -20,7 +21,17 @@ pip install bib2plain
 
 `bib2plain` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
 
-## Example 
+## Examples 
+
+```console
+$ inspirehep2bib Chen:2019zmr | bib2plain
+Chen, X., Gehrmann, T., Glover, N., Höfer, M., Huss, A., "Isolated photon and photon+jet production at NNLO QCD accuracy," JHEP 04 (2020) 166. DOI: 10.1007/JHEP04(2020)166. [1904.01044]
+```
+
+```console
+$ inspirehep2bib 1904.01044 | bib2plain
+Chen, X., Gehrmann, T., Glover, N., Höfer, M., Huss, A., "Isolated photon and photon+jet production at NNLO QCD accuracy," JHEP 04 (2020) 166. DOI: 10.1007/JHEP04(2020)166. [1904.01044]
+```
 
 ```console
 $ arxiv2bib 1101.0001 1102.0002 1103.0003 | bib2plain

@@ -3,10 +3,11 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import string
 import sys
 from pybtex.database import parse_file, parse_string
 
-DEFAULT_FORMAT = '{authors}, "{title}," {journal} {volume} ({year}) {pages}. DOI: {doi}. [{eprint}]'
+DEFAULT_FORMAT = '{formated_authors}, "{title}," {journal} {volume} ({year}) {pages}. DOI: {doi}. [{eprint}]'
 
 
 def fmt_names(persons):
@@ -20,6 +21,22 @@ def fmt_names(persons):
         out.append(f"{last}, {' '.join(initials)}")
     return ", ".join(out)
 
+
+def clean_field(value, char):
+
+            # Substitute special latex characters in authors
+            # (latex, unicode, ascii)
+    latex_char_table = [
+                (r'{\"o}', 'ö', 'oe'),
+                (r'{\"a}', 'ä', 'ae'),
+                (r'{\"u}', 'ü', 'ue'),
+                (r'{\v{z}}', 'ž', 'z'),
+                (r'{\textendash}', '–', '-'),
+            ]
+    for latex, uni, asc in latex_char_table:
+        replacement = uni if char == "unicode" else asc
+        value = value.replace(latex, replacement)
+    return value
 
 def main():
     parser = argparse.ArgumentParser(
@@ -71,41 +88,25 @@ def main():
             if args.eprint and args.eprint != eprint:
                 continue
 
+            fields = {}
+
             authors = fmt_names(entry.persons.get("author", []))
             if not args.no_other_to_et_al:
                 authors = authors.replace(", others, ", " et al.")
                 authors = authors.replace(", others", " et al.")
-            title = entry.fields.get("title").strip("{}")
-            journal = entry.fields.get("journal")
-            volume = entry.fields.get("volume")
-            year = entry.fields.get("year")
-            pages = entry.fields.get("pages")
-            doi = entry.fields.get("doi")
+            fields["formated_authors"] = clean_field(authors, args.char)
 
-            # Substitute special latex characters in authors
-            # (latex, unicode, ascii)
-            latex_char_table = [
-                (r'{\"o}', 'ö', 'oe'),
-                (r'{\"a}', 'ä', 'ae'),
-                (r'{\"u}', 'ü', 'ue'),
-                (r'{\v{z}}', 'ž', 'z'),
-                (r'{\textendash}', '–', '-'),
-            ]
-            for latex, uni, asc in latex_char_table:
-                replacement = uni if args.char == "unicode" else asc
-                authors = authors.replace(latex, replacement)
-                title = title.replace(latex, replacement) if title else None
+            # Raise a error here if key that is None is requested in format string
+            used_keys = {fname for _, fname, _, _ in string.Formatter().parse(args.format) if fname}
+            for k in used_keys:
+                v = entry.fields.get(k)
+                if not k in fields.keys():
+                    if v is None:
+                        raise ValueError(f"Entry '{key}' is missing required field '{k}'")
+                    else:
+                        fields[k] = clean_field(v.strip("{}"), args.char)
 
-            fields = {
-                "authors": authors,
-                "title": title,
-                "journal": journal,
-                "volume": volume,
-                "year": year,
-                "pages": pages,
-                "doi": doi,
-                "eprint": eprint,
-            }
+
             print(args.format.format_map(fields))
 
 
