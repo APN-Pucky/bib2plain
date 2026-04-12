@@ -24,12 +24,17 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = []
+dependencies = [
+  "pybtex"
+]
+
+[project.scripts]
+bib2plain = "bib2plain:main"
 
 [project.urls]
-Documentation = "https://github.com/Alexander Puck Neuwirth/bib2plain#readme"
-Issues = "https://github.com/Alexander Puck Neuwirth/bib2plain/issues"
-Source = "https://github.com/Alexander Puck Neuwirth/bib2plain"
+Documentation = "https://github.com/APN-Pucky/bib2plain#readme"
+Issues = "https://github.com/APN-Pucky/bib2plain/issues"
+Source = "https://github.com/APN-Pucky/bib2plain"
 
 [tool.hatch.version]
 path = "src/bib2plain/__about__.py"
