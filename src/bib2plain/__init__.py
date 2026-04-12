@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
-from pybtex.database import parse_file
+import sys
+from pybtex.database import parse_file, parse_string
 
 DEFAULT_FORMAT = '{authors}, "{title}," {journal} {volume} ({year}) {pages}. DOI: {doi}. [{eprint}]'
 
@@ -26,9 +27,9 @@ def main():
     )
     parser.add_argument(
         "bibfiles",
-        nargs="+",
+        nargs="*",
         metavar="FILE",
-        help=".bib file(s) to process",
+        help=".bib file(s) to process (reads stdin if omitted)",
     )
     # ascii vs unicode
     parser.add_argument(
@@ -57,8 +58,12 @@ def main():
     )
     args = parser.parse_args()
 
-    for bibfile in args.bibfiles:
-        bib = parse_file(bibfile)
+    if args.bibfiles:
+        bibs = [parse_file(f) for f in args.bibfiles]
+    else:
+        bibs = [parse_string(sys.stdin.read(), bib_format="bibtex")]
+
+    for bib in bibs:
 
         for key, entry in bib.entries.items():
             eprint = entry.fields.get("eprint")
