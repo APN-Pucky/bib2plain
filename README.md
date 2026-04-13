@@ -21,7 +21,12 @@ pip install bib2plain
 
 `bib2plain` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
 
-## Examples 
+## Examples
+
+```console
+$ bib2plain tests/loi.bib --eprint  2602.16029 --format '{formated_authors}, "{title}," [{eprint}]'
+Belloni, F., Chiesa, M., Oleari, C., Re, E., "Towards the inclusion of NLO EW corrections in the MiNLO method in Drell-Yan processes," [2602.16029]
+```
 
 ```console
 $ inspirehep2bib Chen:2019zmr | bib2plain

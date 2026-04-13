@@ -129,9 +129,9 @@ def test_eprint_filter_2504_11357():
 
 
 def test_eprint_filter_2602_16029():
-    DEFAULT_FORMAT = '{formated_authors}, "{title}," [{eprint}]'
+    FORMAT = '{formated_authors}, "{title}," [{eprint}]'
     result = subprocess.run(
-        [sys.executable, "-m", "bib2plain", LOI_BIB, "--eprint", "2602.16029", "--format", DEFAULT_FORMAT],
+        [sys.executable, "-m", "bib2plain", LOI_BIB, "--eprint", "2602.16029", "--format", FORMAT],
         capture_output=True,
         text=True,
     )
