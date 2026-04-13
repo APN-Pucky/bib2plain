@@ -3,12 +3,19 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
-import string
+import re
 import sys
 from pybtex.database import parse_file, parse_string
 
-DEFAULT_FORMAT = '{formated_authors}, "{title}," {journal} {volume} ({year}) {pages}. DOI: {doi}. [{eprint}]'
-
+DEFAULT_FORMAT = (
+    '{formated_authors}, "{title},"'
+    '{?journal: {journal}}'
+    '{?volume: {volume}}'
+    '{?year: ({year})}'
+    '{?pages: {pages}.}'
+    '{?doi: DOI: {doi}.}'
+    '{?eprint: [{eprint}]}'
+)
 
 def fmt_names(persons):
     out = []
@@ -22,10 +29,85 @@ def fmt_names(persons):
     return ", ".join(out)
 
 
-def clean_field(value, char):
+class TemplateError(ValueError):
+    pass
 
-            # Substitute special latex characters in authors
-            # (latex, unicode, ascii)
+
+def render_template(template, data):
+    return _render(template, data)
+
+
+def _render(template, data):
+    out = []
+    i = 0
+    n = len(template)
+
+    while i < n:
+        if template[i] != "{":
+            out.append(template[i])
+            i += 1
+            continue
+
+        if i + 1 < n and template[i + 1] == "?":
+            field, inner, new_i = _parse_optional_block(template, i)
+            value = data.get(field)
+            if value:
+                out.append(_render(inner, data))
+            i = new_i
+            continue
+
+        end = template.find("}", i + 1)
+        if end == -1:
+            raise TemplateError(f"Unmatched '{{' at position {i}")
+
+        token = template[i + 1 : end]
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", token):
+            raise TemplateError(f"Invalid placeholder '{{{token}}}' at position {i}")
+
+        if token not in data:
+            raise TemplateError(f"Missing required field: {token}")
+
+        out.append(str(data[token]))
+        i = end + 1
+
+    return "".join(out)
+
+
+def _parse_optional_block(template, start):
+    assert template.startswith("{?", start)
+
+    j = start + 2
+    field_start = j
+    while j < len(template) and template[j] != ":":
+        j += 1
+
+    if j >= len(template):
+        raise TemplateError(f"Unterminated optional block starting at position {start}")
+
+    field = template[field_start:j].strip()
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", field):
+        raise TemplateError(f"Invalid optional field name '{field}' at position {start}")
+
+    inner_start = j + 1
+    depth = 1
+    k = inner_start
+
+    while k < len(template):
+        if template[k] == "{":
+            depth += 1
+        elif template[k] == "}":
+            depth -= 1
+            if depth == 0:
+                inner = template[inner_start:k]
+                return field, inner, k + 1
+        k += 1
+
+    raise TemplateError(f"Unterminated optional block starting at position {start}")
+
+
+def clean_field(value, char):
+    # Substitute special latex characters in authors
+    # (latex, unicode, ascii)
     latex_char_table = [
                 (r'{\"o}', 'ö', 'oe'),
                 (r'{\"a}', 'ä', 'ae'),
@@ -63,9 +145,10 @@ def main():
     parser.add_argument(
         "--format",
         default=DEFAULT_FORMAT,
-        help="custom format string with placeholders: {author}, {title}, "
-             "{journal}, {volume}, {year}, {pages}, {doi}, {eprint}, {formated_authors}"
-             "(default: %(default)r)",
+        help="custom format string with placeholders: {field} (required), "
+             "{?field: ...} (optional, rendered only if field is present). "
+             "Available fields: formated_authors, title, journal, volume, year, "
+             "pages, doi, eprint, etc. (default: %(default)r)",
     )
     parser.add_argument(
         "--no-other-to-et-al",
@@ -94,20 +177,16 @@ def main():
             if not args.no_other_to_et_al:
                 authors = authors.replace(", others, ", " et al.")
                 authors = authors.replace(", others", " et al.")
-            fields["formated_authors"] = clean_field(authors, args.char)
+            if authors:
+                fields["formated_authors"] = clean_field(authors, args.char)
 
-            # Raise a error here if key that is None is requested in format string
-            used_keys = {fname for _, fname, _, _ in string.Formatter().parse(args.format) if fname}
-            for k in used_keys:
-                v = entry.fields.get(k)
-                if not k in fields.keys():
-                    if v is None:
-                        raise ValueError(f"Entry '{key}' is missing required field '{k}'")
-                    else:
-                        fields[k] = clean_field(v.strip("{}"), args.char)
+            for k, v in entry.fields.items():
+                fields[k] = clean_field(v.strip("{}"), args.char)
 
-
-            print(args.format.format_map(fields))
+            try:
+                print(render_template(args.format, fields))
+            except TemplateError as e:
+                raise ValueError(f"Entry '{key}': {e}") from e
 
 
 if __name__ == "__main__":
