@@ -63,8 +63,8 @@ def main():
     parser.add_argument(
         "--format",
         default=DEFAULT_FORMAT,
-        help="custom format string with placeholders: {authors}, {title}, "
-             "{journal}, {volume}, {year}, {pages}, {doi}, {eprint} "
+        help="custom format string with placeholders: {author}, {title}, "
+             "{journal}, {volume}, {year}, {pages}, {doi}, {eprint}, {formated_authors}"
              "(default: %(default)r)",
     )
     parser.add_argument(
